@@ -7,7 +7,9 @@ export interface User {
   createdAt: string;
 }
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.PROD 
+  ? 'https://url-shortener-78wi.onrender.com/api' 
+  : 'http://localhost:5000/api';
 
 export const useAuth = (showToast: (msg: string, type?: 'success' | 'error') => void) => {
   const [user, setUser] = useState<User | null>(null);

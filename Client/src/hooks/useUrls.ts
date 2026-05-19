@@ -30,7 +30,9 @@ export interface AnalyticsData {
   dailyClicks: Array<{ date: string; count: number }>;
 }
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.PROD 
+  ? 'https://url-shortener-78wi.onrender.com/api' 
+  : 'http://localhost:5000/api';
 
 export const useUrls = (token: string | null, showToast: (msg: string, type?: 'success' | 'error') => void) => {
   const [urls, setUrls] = useState<Url[]>([]);
