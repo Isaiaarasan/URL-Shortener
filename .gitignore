@@ -10,7 +10,6 @@ Client/out/
 # Environment files
 backend/.env
 backend/.env.local
-.env
 
 # Diagnostic logs
 *.log
@@ -21,3 +20,4 @@ yarn-error.log*
 # System files
 .DS_Store
 Thumbs.db
+config.bat
