@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { LinkIcon, SettingsIcon, StatsIcon, PlusIcon } from '../components/Icons';
 import type { Url } from '../hooks/useUrls';
+import type { User } from '../hooks/useAuth';
 
 interface LandingProps {
+  user: User | null;
   onShorten: (url: string, alias: string | null, expires: string | null) => Promise<Url | null>;
   shortenLoading: boolean;
   shortenResult: Url | null;
@@ -10,6 +12,7 @@ interface LandingProps {
 }
 
 export const Landing: React.FC<LandingProps> = ({
+  user,
   onShorten,
   shortenLoading,
   shortenResult,
@@ -42,78 +45,89 @@ export const Landing: React.FC<LandingProps> = ({
         Generate clean, secure redirect links and custom aliases. Monitor analytics dynamically through an index-optimized database cluster.
       </p>
 
-      {/* Shortening panel */}
-      <div className="shorten-container">
-        <form onSubmit={handleSubmit} className="auth-form" style={{ gap: '14px' }}>
-          <div className="shorten-form-row">
-            <div className="input-group">
-              <span className="input-icon">
-                <LinkIcon />
-              </span>
-              <input
-                type="url"
-                className="form-input"
-                placeholder="Paste a long link destination here..."
-                value={originalUrl}
-                onChange={(e) => setOriginalUrl(e.target.value)}
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={shortenLoading} style={{ padding: '12px 24px' }}>
-              {shortenLoading ? 'Snapping...' : 'Shorten'}
-            </button>
-          </div>
-
-          <div className="advanced-trigger" onClick={() => setShowAdvanced(!showAdvanced)}>
-            <SettingsIcon />
-            <span>{showAdvanced ? 'Hide routing settings' : 'Configure custom alias & link expiry'}</span>
-          </div>
-
-          {showAdvanced && (
-            <div className="advanced-options">
-              <div className="option-field">
-                <label htmlFor="alias-input">Custom Alias (Optional)</label>
+      {/* Conditional shortener interface */}
+      {!user ? (
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', marginBottom: '48px' }}>
+          <a href="#/signup" className="btn btn-primary" style={{ padding: '12px 28px', fontSize: '15px', fontWeight: 600 }}>
+            Get Started Free
+          </a>
+          <a href="#/login" className="btn btn-secondary" style={{ padding: '12px 28px', fontSize: '15px', fontWeight: 600 }}>
+            Sign In to Account
+          </a>
+        </div>
+      ) : (
+        <div className="shorten-container">
+          <form onSubmit={handleSubmit} className="auth-form" style={{ gap: '14px' }}>
+            <div className="shorten-form-row">
+              <div className="input-group">
+                <span className="input-icon">
+                  <LinkIcon />
+                </span>
                 <input
-                  id="alias-input"
-                  type="text"
-                  placeholder="e.g. repo-link"
-                  value={customAlias}
-                  onChange={(e) => setCustomAlias(e.target.value)}
+                  type="url"
+                  className="form-input"
+                  placeholder="Paste a long link destination here..."
+                  value={originalUrl}
+                  onChange={(e) => setOriginalUrl(e.target.value)}
+                  required
                 />
               </div>
-              <div className="option-field">
-                <label htmlFor="expiry-input">Expiration Date (Optional)</label>
-                <input
-                  id="expiry-input"
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                />
+              <button type="submit" className="btn btn-primary" disabled={shortenLoading} style={{ padding: '12px 24px' }}>
+                {shortenLoading ? 'Snapping...' : 'Shorten'}
+              </button>
+            </div>
+
+            <div className="advanced-trigger" onClick={() => setShowAdvanced(!showAdvanced)}>
+              <SettingsIcon />
+              <span>{showAdvanced ? 'Hide routing settings' : 'Configure custom alias & link expiry'}</span>
+            </div>
+
+            {showAdvanced && (
+              <div className="advanced-options">
+                <div className="option-field">
+                  <label htmlFor="alias-input">Custom Alias (Optional)</label>
+                  <input
+                    id="alias-input"
+                    type="text"
+                    placeholder="e.g. repo-link"
+                    value={customAlias}
+                    onChange={(e) => setCustomAlias(e.target.value)}
+                  />
+                </div>
+                <div className="option-field">
+                  <label htmlFor="expiry-input">Expiration Date (Optional)</label>
+                  <input
+                    id="expiry-input"
+                    type="date"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </form>
+
+          {/* Shorten Results Card */}
+          {shortenResult && (
+            <div className="result-card">
+              <div className="result-urls">
+                <a href={shortenResult.shortUrl} target="_blank" rel="noreferrer" className="result-short">
+                  {shortenResult.shortUrl}
+                </a>
+                <div className="result-original">{shortenResult.originalUrl}</div>
+              </div>
+              <div className="result-actions">
+                <button onClick={() => onCopy(shortenResult.shortUrl)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  Copy
+                </button>
+                <a href={`#/stats/${shortenResult.shortCode}`} className="btn btn-text" style={{ padding: '6px 12px', fontSize: '13px' }}>
+                  View Stats
+                </a>
               </div>
             </div>
           )}
-        </form>
-
-        {/* Shorten Results Card */}
-        {shortenResult && (
-          <div className="result-card">
-            <div className="result-urls">
-              <a href={shortenResult.shortUrl} target="_blank" rel="noreferrer" className="result-short">
-                {shortenResult.shortUrl}
-              </a>
-              <div className="result-original">{shortenResult.originalUrl}</div>
-            </div>
-            <div className="result-actions">
-              <button onClick={() => onCopy(shortenResult.shortUrl)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '13px' }}>
-                Copy
-              </button>
-              <a href={`#/stats/${shortenResult.shortCode}`} className="btn btn-text" style={{ padding: '6px 12px', fontSize: '13px' }}>
-                View Stats
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Grid marketing features */}
       <div className="features-grid">

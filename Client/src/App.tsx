@@ -142,6 +142,7 @@ function App() {
       {/* Main content route view splits */}
       {currentPath === '#/' && (
         <Landing
+          user={user}
           onShorten={shortenUrl}
           shortenLoading={shortenLoading}
           shortenResult={shortenResult}
