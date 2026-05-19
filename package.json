@@ -1,0 +1,14 @@
+{
+  "name": "linksnap-root",
+  "version": "1.0.0",
+  "description": "Root workspace configuration for LinkSnap URL Shortener",
+  "scripts": {
+    "install-all": "npm install && npm install --prefix Client && npm install --prefix backend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix Client\"",
+    "build": "npm run build --prefix Client",
+    "start": "npm start --prefix backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

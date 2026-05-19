@@ -19,6 +19,14 @@
 11. [AI Planning Document](#ai-planning-document)
 12. [Assumptions Made](#assumptions-made)
 13. [UI Libraries & Dependencies](#ui-libraries--dependencies)
+14. [Security Best Practices](#security-best-practices)
+15. [Performance & Caching Strategy](#performance--caching-strategy)
+16. [Error Handling & Logging](#error-handling--logging)
+17. [Testing Strategy](#testing-strategy)
+18. [Deployment & CI/CD Pipeline](#deployment--cicd-pipeline)
+19. [Git Conventions](#git-conventions)
+20. [Scripts Reference](#scripts-reference)
+
 
 ---
 
@@ -457,38 +465,70 @@ http://localhost:5000/api
 | `GET` | `/auth/me` | ✅ | Get current user |
 
 #### `POST /auth/signup`
+- **Description:** Registers a new user account with secure password hashing.
+- **Request Body:**
 ```json
-// Request Body
 {
   "name": "Jane Doe",
   "email": "jane@example.com",
   "password": "SecurePass123!"
 }
-
-// Response 201
+```
+- **Response (201 Created):**
+```json
 {
   "success": true,
   "data": {
-    "token": "eyJhbGci...",
-    "user": { "_id": "...", "name": "Jane Doe", "email": "jane@example.com" }
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "_id": "6647abcd1234ef5678901234",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "createdAt": "2026-05-19T07:30:00.000Z"
+    }
   }
 }
 ```
 
 #### `POST /auth/login`
+- **Description:** Authenticates user credentials and returns a JWT token for session management.
+- **Request Body:**
 ```json
-// Request Body
 {
   "email": "jane@example.com",
   "password": "SecurePass123!"
 }
-
-// Response 200
+```
+- **Response (200 OK):**
+```json
 {
   "success": true,
   "data": {
-    "token": "eyJhbGci...",
-    "user": { "_id": "...", "name": "Jane Doe", "email": "jane@example.com" }
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "_id": "6647abcd1234ef5678901234",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "createdAt": "2026-05-19T07:30:00.000Z"
+    }
+  }
+}
+```
+
+#### `GET /auth/me`
+- **Description:** Fetches profile information for the currently authenticated session using the JWT Bearer token.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "6647abcd1234ef5678901234",
+      "name": "Jane Doe",
+      "email": "jane@example.com",
+      "createdAt": "2026-05-19T07:30:00.000Z"
+    }
   }
 }
 ```
@@ -506,31 +546,103 @@ http://localhost:5000/api
 | `GET` | `/urls/:id/analytics` | ✅ | Get URL analytics |
 
 #### `POST /urls`
+- **Description:** Shortens a given destination URL. Supports optional custom aliases and links expiration dates.
+- **Headers:** `Authorization: Bearer <token>`
+- **Request Body:**
 ```json
-// Request Body
 {
-  "originalUrl": "https://www.example.com/very/long/path?query=value",
-  "customAlias": "my-link",        // optional
-  "expiresAt": "2026-12-31"        // optional ISO date
+  "originalUrl": "https://www.github.com/katomaran/hackathon-2026",
+  "customAlias": "kt26hk",        // optional (must be unique)
+  "expiresAt": "2026-12-31T23:59:59.000Z"  // optional ISO datetime
 }
-
-// Response 201
+```
+- **Response (201 Created):**
+```json
 {
   "success": true,
   "data": {
-    "_id": "...",
-    "originalUrl": "https://...",
-    "shortCode": "my-link",
-    "shortUrl": "http://localhost:5000/my-link",
+    "_id": "6647bcde1234ef5678905678",
+    "originalUrl": "https://www.github.com/katomaran/hackathon-2026",
+    "shortCode": "kt26hk",
+    "shortUrl": "http://localhost:5000/kt26hk",
     "clicks": 0,
-    "createdAt": "2026-05-19T..."
+    "expiresAt": "2026-12-31T23:59:59.000Z",
+    "createdAt": "2026-05-19T07:30:00.000Z",
+    "updatedAt": "2026-05-19T07:30:00.000Z"
   }
 }
 ```
 
-#### `GET /urls` — Query Params
+#### `GET /urls`
+- **Description:** Returns all URLs created by the logged-in user. Supports client-side sorting, pagination, and text filtering.
+- **Headers:** `Authorization: Bearer <token>`
+- **Query Params:** `?page=1&limit=10&search=github`
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "urls": [
+      {
+        "_id": "6647bcde1234ef5678905678",
+        "originalUrl": "https://www.github.com/katomaran/hackathon-2026",
+        "shortCode": "kt26hk",
+        "shortUrl": "http://localhost:5000/kt26hk",
+        "clicks": 47,
+        "expiresAt": "2026-12-31T23:59:59.000Z",
+        "createdAt": "2026-05-19T07:30:00.000Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "limit": 10,
+      "totalPages": 3,
+      "totalCount": 24
+    }
+  }
+}
 ```
-?page=1&limit=10&search=github
+
+#### `PUT /urls/:id`
+- **Description:** Updates the destination link or expiry date for an active short URL owned by the logged-in user.
+- **Headers:** `Authorization: Bearer <token>`
+- **Request Body:**
+```json
+{
+  "originalUrl": "https://github.com/katomaran/hackathon-2026-new",
+  "expiresAt": "2027-06-30T12:00:00.000Z"
+}
+```
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "URL successfully updated",
+  "data": {
+    "_id": "6647bcde1234ef5678905678",
+    "originalUrl": "https://github.com/katomaran/hackathon-2026-new",
+    "shortCode": "kt26hk",
+    "shortUrl": "http://localhost:5000/kt26hk",
+    "clicks": 47,
+    "expiresAt": "2027-06-30T12:00:00.000Z",
+    "createdAt": "2026-05-19T07:30:00.000Z",
+    "updatedAt": "2026-05-19T12:00:00.000Z"
+  }
+}
+```
+
+#### `DELETE /urls/:id`
+- **Description:** Deletes a specific short URL and purges all of its associated click-tracking analytics entries.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "URL and its analytics were deleted successfully",
+  "data": {
+    "_id": "6647bcde1234ef5678905678"
+  }
+}
 ```
 
 ---
@@ -541,11 +653,13 @@ http://localhost:5000/api
 |---|---|---|---|
 | `GET` | `/:shortCode` | ❌ | Redirect to original URL |
 
-- Returns `302 Found` with `Location` header
-- Records a visit document (timestamp, IP, user-agent)
-- Increments `clicks` counter atomically
-- Returns `410 Gone` if link is expired
-- Returns `404 Not Found` if short code doesn't exist
+- **Flow Behavior:**
+  - Performs an atomic `$inc` on the URL click counter.
+  - Asynchronously saves a `Visit` record containing request timestamps, masked IP addresses, and User-Agent strings.
+  - Emits a HTTP `302 Found` status with the `Location` header directed to the original destination URL.
+- **Error Behavior:**
+  - Returns `410 Gone` if the link's `expiresAt` date has passed.
+  - Returns `404 Not Found` if the requested short code is invalid.
 
 ---
 
@@ -556,22 +670,53 @@ http://localhost:5000/api
 | `GET` | `/urls/:id/analytics` | ✅ | Detailed analytics (owner only) |
 | `GET` | `/stats/:shortCode` | ❌ | Public stats for any link |
 
-#### `GET /urls/:id/analytics` Response
+#### `GET /urls/:id/analytics`
+- **Description:** Accesses detailed metrics for the owner's link, returning total clicks, temporal trends, and recent visits.
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
+    "url": {
+      "shortCode": "kt26hk",
+      "originalUrl": "https://github.com/katomaran/hackathon-2026-new",
+      "createdAt": "2026-05-19T07:30:00.000Z"
+    },
     "totalClicks": 142,
     "lastVisited": "2026-05-19T10:22:00.000Z",
     "recentVisits": [
-      { "timestamp": "2026-05-19T10:22:00.000Z", "userAgent": "Mozilla/5.0..." },
-      ...
+      {
+        "timestamp": "2026-05-19T10:22:00.000Z",
+        "ip": "192.168.***.***",
+        "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36..."
+      }
     ],
     "dailyClicks": [
       { "date": "2026-05-13", "count": 8 },
       { "date": "2026-05-14", "count": 15 },
-      ...
+      { "date": "2026-05-15", "count": 22 },
+      { "date": "2026-05-16", "count": 18 },
+      { "date": "2026-05-17", "count": 31 },
+      { "date": "2026-05-18", "count": 25 },
+      { "date": "2026-05-19", "count": 23 }
     ]
+  }
+}
+```
+
+#### `GET /stats/:shortCode`
+- **Description:** A public analytics dashboard query returning high-level metrics for public display. Protects database records by withholding visitor IP addresses and User-Agents.
+- **Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "shortCode": "kt26hk",
+    "originalUrl": "https://github.com/...",
+    "clicks": 142,
+    "createdAt": "2026-05-19T07:30:00.000Z",
+    "lastVisited": "2026-05-19T10:22:00.000Z"
   }
 }
 ```
@@ -793,52 +938,141 @@ Auth (BE) → Auth (FE) → URL CRUD (BE) → URL CRUD (FE)
 
 ---
 
-## Sample API Responses
+## Security Best Practices
 
-### Successful URL Creation
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "6647abcd1234ef5678901234",
-    "originalUrl": "https://www.github.com/katomaran/hackathon-2026",
-    "shortCode": "kt26hk",
-    "shortUrl": "http://localhost:5000/kt26hk",
-    "clicks": 0,
-    "expiresAt": null,
-    "createdAt": "2026-05-19T07:30:00.000Z"
-  }
-}
+To ensure high-grade data protection and prevent standard attack vectors, the following security architecture has been implemented:
+
+### 1. Cryptographic Password Hashing
+- Under no circumstances are raw user passwords saved to the database.
+- Leverages the modern industry-standard `bcryptjs` library with **12 salt rounds** to perform one-way cryptographic hashing of user passwords.
+- Executed automatically via a Mongoose pre-save hook on the `User` model, avoiding developer oversight.
+
+### 2. Session Management & Authorization (JWT)
+- Authenticated routes are protected via a robust JSON Web Token (JWT) workflow.
+- Tokens are cryptographically signed using the `HMAC-SHA256` algorithm with a securely stored server-side `JWT_SECRET`.
+- Signed tokens carry standard claims (`userId`) with an expiration of `7d`. Clients present this token in the `Authorization` header as a `Bearer <token>` scheme.
+
+### 3. API Rate Limiting
+- Public and user-facing endpoints are shielded from brute-force and Denial-of-Service (DoS) attacks using the `express-rate-limit` middleware.
+- **Global API Rate Limit:** Restricts requests to 100 per 15-minute window per IP.
+- **Authentication Routes Rate Limit:** Signup and login attempts are strictly capped at 10 requests per 15-minute window per IP to thwart credential stuffing.
+
+### 4. Input Sanitization & Schematized Validation
+- Standard validation schemas are enforced on both the client (via `zod` and `react-hook-form`) and the server (via `express-validator`).
+- Destination URLs must conform to valid URI structures (verifying `http` or `https` protocols).
+- Custom short code aliases undergo regular expression validation: `^[a-zA-Z0-9-_]+$` (restricting inputs to URL-safe alphanumeric symbols, hyphens, and underscores).
+
+### 5. IP Masking and Privacy (GDPR Compliance)
+- To protect visitor privacy, request IP addresses recorded in the `visits` collection are masked or hashed.
+- The system masks the last octet of IPv4 addresses (e.g., `192.168.1.1` becomes `192.168.***.***`) before committing to disk, adhering to strict modern data residency and privacy regulations.
+
+---
+
+## Performance & Caching Strategy
+
+High performance is critical for short link redirection. The following strategies ensure minimal database query latencies:
+
+### 1. Database Indexing
+Mongoose models configure explicit Mongo database indexes to optimize query routing:
+- **`urls.shortCode`:** A single-field unique index. Provides $O(1)$ lookup time for redirection routing.
+- **`urls.userId` + `urls.createdAt` (descending):** A compound index optimized for the user dashboard to load sorted, paginated records efficiently.
+- **`visits.urlId` + `visits.timestamp` (descending):** A compound index enabling near-instantaneous computation of daily trend charts and chronological visit histories.
+- **`urls.expiresAt`:** A dedicated MongoDB Time-To-Live (TTL) index. MongoDB's background scheduler automatically deletes expired links in the background when the current clock surpasses the document's expiry date.
+
+### 2. High-Performance Redirect Path (Planned Redis Architecture)
+In production, database bottlenecks on high-traffic links are avoided by placing an in-memory `Redis` caching layer in front of the redirect controller:
+
+```
+                  ┌───────────────┐
+                  │    Request    │
+                  └───────┬───────┘
+                          │ GET /:shortCode
+                          ▼
+               /=====================\
+              <   Exists in Cache?    >
+               \=====================/
+                    /           \
+            YES    /             \   NO
+                  /               \
+                 ▼                 ▼
+         ┌──────────────┐   ┌──────────────┐
+         │ Read Redis   │   │ Query Mongo  │
+         │ Redirect (302)│   └──────┬───────┘
+         └──────────────┘          │
+                                   ▼
+                            ┌──────────────┐
+                            │ Cache in     │
+                            │ Redis (24h)  │
+                            └──────┬───────┘
+                                   ▼
+                            ┌──────────────┐
+                            │ Redirect (302)│
+                            └──────┬───────┘
+                                   ▼
+                            /===============\
+                           (  Record Visit   )  <-- Handled asynchronously via 
+                            \===============/      an event queue or worker thread
 ```
 
-### Analytics Response
-```json
-{
-  "success": true,
-  "data": {
-    "url": {
-      "shortCode": "kt26hk",
-      "originalUrl": "https://github.com/...",
-      "createdAt": "2026-05-19T07:30:00.000Z"
-    },
-    "totalClicks": 47,
-    "lastVisited": "2026-05-19T11:45:00.000Z",
-    "recentVisits": [
-      { "timestamp": "2026-05-19T11:45:00.000Z", "userAgent": "Chrome/124" },
-      { "timestamp": "2026-05-19T10:02:00.000Z", "userAgent": "Safari/17" }
-    ],
-    "dailyClicks": [
-      { "date": "2026-05-13", "count": 3 },
-      { "date": "2026-05-14", "count": 9 },
-      { "date": "2026-05-15", "count": 12 },
-      { "date": "2026-05-16", "count": 7 },
-      { "date": "2026-05-17", "count": 8 },
-      { "date": "2026-05-18", "count": 5 },
-      { "date": "2026-05-19", "count": 3 }
-    ]
-  }
-}
-```
+---
+
+## Error Handling & Logging
+
+Standardized, predictable responses and detailed server log observability are key pillars of LinkSnap.
+
+### 1. Unified Operational Error Handling
+- The server implements a custom `AppError` class extending the native JavaScript `Error` class to encapsulate specific HTTP status codes and operational flags.
+- An Express global error-handling middleware intercepts thrown exceptions to sanitize and format response payloads uniformly.
+
+### 2. Separation of Concerns for Error Classes
+- **Operational Errors (Expected):** Invalid credentials, failed validations, expired links (410), or non-existent URLs (404). These return descriptive messages in the standard JSON shape.
+- **System Errors (Unexpected):** Database connection timeouts, disk space exhaustion, or syntax errors. The client receives a generic `"Something went wrong"` 500 status, while the actual stack trace is output to secure system logs and sent to monitoring services.
+
+### 3. Observability & Request Logging
+- Dev sessions employ `morgan` for real-time console coloring of network responses.
+- In production, server events are routed through a structured JSON logger (like `Winston` or `Pino`), which aggregates logs into centralized dashboards (Elasticsearch, Logstash, Datadog) for predictive failure analytics.
+
+---
+
+## Testing Strategy
+
+To establish continuous integration confidence and prevent regression bugs, the codebase follows a multi-tiered test strategy:
+
+### 1. Backend REST API Integration Tests
+- **Framework:** `Jest` paired with `Supertest` to simulate live HTTP request chains without opening networking ports.
+- **Coverage Targets:**
+  - Complete authentication workflows (Signup → Login → Profile fetching).
+  - Validation boundary checks (e.g., verifying custom aliases with special characters reject with a 400).
+  - Expiration and redirection routing assertions.
+- **Isolation:** A dedicated in-memory Mongo Server instance (`mongodb-memory-server`) isolates testing environments to prevent dirtying dev and production clusters.
+
+### 2. Frontend Component & Schema Testing
+- **Framework:** `Vitest` and `React Testing Library` for DOM assertion rendering.
+- **Coverage Targets:**
+  - Validation schemas (confirming the Zod parser accurately blocks malformed URLs on input).
+  - State store operations (mocking the Zustand store to test optimistic deletion UI feedback).
+  - Mocking networking boundaries via Mock Service Worker (`MSW`) to simulate real API latency, failure states, and rate limits.
+
+---
+
+## Deployment & CI/CD Pipeline
+
+LinkSnap is engineered for fully automated, containerized deployments.
+
+### 1. Containerization (Docker)
+Both the frontend and backend contain standardized, multi-stage `Dockerfile` configurations:
+- **Backend Dockerfile:** Standard Node.js base container, installs production dependencies, and exposes the port.
+- **Frontend Dockerfile:** Builds the static SPA assets and wraps them in a lightweight `Nginx` container to serve assets at sub-millisecond latencies.
+
+### 2. Infrastructure Hosting Topology
+- **API Server & Short URL Router:** Deployed on **Render** or **Fly.io** as auto-scaling Web Services connected to the MongoDB Atlas cluster.
+- **Static Frontend Client:** Built and hosted on **Vercel** or **Netlify**, utilizing globally distributed CDNs for instantaneous load times.
+- **Database:** Hosted on **MongoDB Atlas** (M0 cluster during hackathon development; seamless horizontal scaling to dedicated tier for high-load production).
+
+### 3. Automated CI/CD Workflows
+Using **GitHub Actions**, a fully automated continuous deployment pipeline is configured:
+- **Linting & Compilation check:** Triggered on every pull request to compile TS types and run ESLint.
+- **Automated Deployments:** Successful merges to `main` auto-trigger webhook integrations that rebuild the containers and update production instances on Vercel and Render with zero-downtime rolling restarts.
 
 ---
 
